@@ -5,7 +5,7 @@ import copy
 import numpy as np
 import pandas as pd
 
-from .utils import computeStatistics, contained_in_other_keywords, count_words
+from .utils import computeStatistics,computeStatistics_doc, contained_in_other_keywords, count_words
 
 
 def c_value(text,patterns):
@@ -101,8 +101,13 @@ def okapi(corpus,patterns,opt="AVG"):
             stats_per_doc[ix][term]["rank_norm"] = rank/max_rank#(rank-min_rank)/(max_rank-min_rank)
     return apply_opt(general_stats,stats_per_doc,opt)
 
-def tf_idf(corpus,patterns,opt="AVG"):
-    general_stats, stats_per_doc = computeStatistics(patterns, corpus=corpus)
+def tf_idf(corpus,patterns,opt="AVG",general_stats = {}):
+    fast_method = True
+    if general_stats == {} :
+        general_stats, stats_per_doc = computeStatistics(patterns, corpus=corpus)
+    else :
+        stats_per_doc = {"0":computeStatistics_doc(patterns,corpus)}
+        fast_method = False
     for ix, doc in stats_per_doc.items():
         max_rank, min_rank = 0., 9999.0
         try:
@@ -118,7 +123,15 @@ def tf_idf(corpus,patterns,opt="AVG"):
             min_rank = min(min_rank, rank)
             stats_per_doc[ix][term]["rank"] = rank
             stats_per_doc[ix][term]["rank_norm"] = rank/max_rank#(rank - min_rank) / (max_rank - min_rank)
-    return apply_opt(general_stats, stats_per_doc, opt)
+            if not fast_method :
+                if not "rank" in general_stats[term]:
+                    general_stats[term]["rank"] = stats_per_doc[ix][term]["rank_norm"]
+                else :
+                    general_stats[term]["rank"] += stats_per_doc[ix][term]["rank_norm"]
+    if fast_method :
+        return apply_opt(general_stats, stats_per_doc, opt)
+    else :
+        return general_stats
 
 
 def f_okapi_c(corpus,patterns,opt="AVG"):

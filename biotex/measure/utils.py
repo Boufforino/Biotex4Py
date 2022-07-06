@@ -61,6 +61,98 @@ def computeStatistics(pattern_instance : Pattern, text=None,corpus=None):
                     stats_per_doc[ix][term]["freq"] +=1
     return stats_general, stats_per_doc
 
+def computeStatistics_doc(pattern_instance : Pattern, text=None,corpus=None):
+    """
+    Return two dict, one that store overall corpus statistics of terms identified, the second store statistics
+    of each term per document.
+
+    Parameters
+    ----------
+    pattern_instance : Pattern
+        pattern database
+    text : str or None
+    corpus : str or None
+
+    Returns
+    -------
+    tuple(dict, dict)
+        overalldocuments statistics dict, per document statistics dict
+    """
+    stats_per_doc = {}
+    longest_pat = pattern_instance.get_longest_pattern() + 1 # +1 to offset the double range()
+    if not text is None:
+        corpus = [text]
+    stats_per_doc = {}
+    words = text["word"].values
+    partofspeech_vals = text["pos"].values
+    for iy,pos in enumerate(partofspeech_vals):
+        for i in range(longest_pat):
+            pos_seq = [partofspeech_vals[iy+dec] for dec in range(i) if iy+dec <len(partofspeech_vals)]
+            flag,pattern,frequency = pattern_instance.match(pos_seq)
+            if flag:
+                term = " ".join([words[iy+dec] for dec in range(i) if iy+dec <len(partofspeech_vals)]).lower()
+                if term not in stats_per_doc:
+                    stats_per_doc[term] = {
+                        "freq":0,
+                        "new_freq":0
+                    }
+                stats_per_doc[term]["freq"] +=1
+    return stats_per_doc
+
+
+
+
+
+
+
+
+def computeStatistics_general(pattern_instance : Pattern,stats_general, text,num_doc):
+    """
+    Return two dict, one that store overall corpus statistics of terms identified, the second store statistics
+    of each term per document.
+
+    Parameters
+    ----------
+    pattern_instance : Pattern
+        pattern database
+    text : str or None
+    corpus : str or None
+
+    Returns
+    -------
+    tuple(dict, dict)
+        overalldocuments statistics dict, per document statistics dict
+    """
+    longest_pat = pattern_instance.get_longest_pattern() + 1 # +1 to offset the double range()
+    words = text["word"].values
+    partofspeech_vals = text["pos"].values
+    for iy,pos in enumerate(partofspeech_vals):
+        for i in range(longest_pat):
+            pos_seq = [partofspeech_vals[iy+dec] for dec in range(i) if iy+dec <len(partofspeech_vals)]
+            flag,pattern,frequency = pattern_instance.match(pos_seq)
+            if flag:
+                term = " ".join([words[iy+dec] for dec in range(i) if iy+dec <len(partofspeech_vals)]).lower()
+                if not term in stats_general:
+                    stats_general[term] = {
+                        "freq" : 1,
+                        "new_freq": 0,
+                        "num_doc":1,
+                        "last_saw":num_doc,
+                        "pattern_used":pattern,
+                        "pattern_freq":frequency,
+                        "num_words" :count_words(term)
+                    }
+                elif term in stats_general:
+                    stats_general[term]["freq"] += 1
+                    if num_doc < stats_general[term]["last_saw"]:
+                        stats_general[term]["last_saw"] = num_doc
+                        stats_general[term]["num_doc"] += 1
+    return stats_general
+
+
+
+
+
 def term_in_term(term1,term2):
     """
     Return true if a term appears in a second one.

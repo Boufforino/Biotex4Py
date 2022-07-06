@@ -8,6 +8,8 @@ from .utils import get_pos_and_lemma_corpus
 
 from .pattern import Pattern
 from .measure import measure as mea
+from .measure.measure import tf_idf
+from .measure.utils import computeStatistics_general
 import pandas as pd
 
 import os
@@ -82,6 +84,57 @@ class Biotex:
 
         corpus_parsed = get_pos_and_lemma_corpus(corpus, "fr", n_process=n_process)
         return self.parse_output(getattr(mea,measure)(corpus_parsed,self.p,**kwargs))
+
+    def extract_general_stats_blank_corpus(self,corpus):
+        """
+        Return a dataframe that contains terms extracted from a corpus.
+        Parameters
+        ----------
+        corpus : list of str
+            corpus
+
+        Returns
+        -------
+        pd.DataFrame
+            dataframe that contains the terms extracted
+        """
+        general_stats_blank = {}
+        for num_doc,doc in enumerate(corpus) :
+            doc_parsed = get_pos_and_lemma_text(doc, "fr")
+            general_stats_blank = computeStatistics_general(self.p,general_stats_blank, doc_parsed,num_doc)
+        return general_stats_blank
+
+    def apply_measure_to_general_stats(self,corpus,measure,general_stats,**kwargs):
+        """
+        Return a dataframe that contains terms extracted from a corpus.
+        Parameters
+        ----------
+        corpus : list of str
+            corpus
+        measure : str
+            function name of the measure you want to use
+        n_process : int
+            number of thread you wish to allocate when parsing the corpus with Spacy
+        kwargs : **kwargs
+            contains parameters specific to a measure
+
+        Returns
+        -------
+        pd.DataFrame
+            dataframe that contains the terms extracted
+        """
+        self.measure_verif(measure)
+
+        if measure in one_document_measure:
+            raise ValueError("Can't use {0} for corpus.".format(measure))
+
+        for num_doc,doc in enumerate(corpus) :
+            doc_parsed = get_pos_and_lemma_text(doc, "fr")
+            general_stats = tf_idf(doc_parsed,self.p,opt="AVG",general_stats=general_stats)
+
+        for term in general_stats :
+            general_stats[term]["rank"] = general_stats[term]["rank"] / general_stats[term]["num_doc"]
+        return self.parse_output(general_stats)
 
     def extract_term_document(self,text,measure,**kwargs):
         """
